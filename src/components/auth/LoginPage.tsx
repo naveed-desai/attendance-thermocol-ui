@@ -13,6 +13,7 @@ import {
   User,
   KeyRound,
 } from 'lucide-react';
+import { envConfig } from '../../config/envConfig.ts';
 
 export const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -145,54 +146,56 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick-fill Helper Badges for Demonstration & Convenience */}
-          <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-              Default Credentials Helper
-            </span>
+          {/* Quick-fill Helper Badges for Demonstration & Convenience (Controlled via envConfig) */}
+          {envConfig.ENABLE_QUICK_LOGIN && (
+            <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                Default Credentials Helper
+              </span>
 
-            {/* Admin Preset */}
-            <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-2xl flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2">
-                <Shield className="w-4 h-4 text-purple-600 shrink-0" />
-                <div>
-                  <span className="font-bold text-purple-900 block">Admin Account</span>
-                  <span className="text-purple-600 text-[11px]">
-                    9008888569 • naveed123
-                  </span>
+              {/* Admin Preset */}
+              <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-2xl flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-4 h-4 text-purple-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-purple-900 block">Admin Account</span>
+                    <span className="text-purple-600 text-[11px]">
+                      9008888569 • naveed123
+                    </span>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={fillAdminCredentials}
+                  className="px-2.5 py-1 bg-white hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Auto-fill
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={fillAdminCredentials}
-                className="px-2.5 py-1 bg-white hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-              >
-                Auto-fill
-              </button>
-            </div>
 
-            {/* Employee Preset */}
-            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2">
-                <User className="w-4 h-4 text-indigo-600 shrink-0" />
-                <div>
-                  <span className="font-bold text-slate-800 block">Employee Accounts</span>
-                  <span className="text-slate-500 text-[11px]">
-                    Use your phone • Default password: test123
-                  </span>
+              {/* Employee Preset */}
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-slate-800 block">Employee Accounts</span>
+                    <span className="text-slate-500 text-[11px]">
+                      Use your phone • Default password: test123
+                    </span>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={fillEmployeeDefaultPassword}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center space-x-1"
+                  title="Fill 'test123' as password"
+                >
+                  <KeyRound className="w-3 h-3 text-slate-400" />
+                  <span>Fill PW</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={fillEmployeeDefaultPassword}
-                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center space-x-1"
-                title="Fill 'test123' as password"
-              >
-                <KeyRound className="w-3 h-3 text-slate-400" />
-                <span>Fill PW</span>
-              </button>
             </div>
-          </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-slate-400">

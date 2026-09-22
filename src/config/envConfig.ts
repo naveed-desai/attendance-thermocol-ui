@@ -13,14 +13,18 @@ const apiBaseUrl = cleanBackendUrl.endsWith('/api')
   ? cleanBackendUrl
   : `${cleanBackendUrl}/api`;
 
+const enableQuickLogin =
+  import.meta.env.VITE_ENABLE_QUICK_LOGIN === 'true';
+
 export const envConfig = {
   BACKEND_URL: cleanBackendUrl,
   API_BASE_URL: apiBaseUrl,
+  ENABLE_QUICK_LOGIN: enableQuickLogin,
   MODE: import.meta.env.MODE,
   IS_DEV: import.meta.env.DEV,
   IS_PROD: import.meta.env.PROD,
 } as const;
 
-export const { BACKEND_URL, API_BASE_URL } = envConfig;
+export const { BACKEND_URL, API_BASE_URL, ENABLE_QUICK_LOGIN } = envConfig;
 
 export default envConfig;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/index.ts';
 import {
   createEmployee,
+  updateEmployee,
   deleteEmployee,
 } from '../../store/slices/employeesSlice.ts';
 import {
@@ -15,6 +16,11 @@ import {
   Briefcase,
   Phone,
   Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 import { CustomSelect } from '../common/CustomSelect.tsx';
 
@@ -33,17 +39,33 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'employee' | 'admin'>('employee');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [designation, setDesignation] = useState('');
   const [customDailyRate, setCustomDailyRate] = useState<string>('');
 
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Change Password Modal state
+  const [passwordModalEmp, setPasswordModalEmp] = useState<{
+    id: string;
+    name: string;
+    phone: string;
+  } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
   const handleOpenModal = () => {
     setName('');
     setEmail('');
     setRole('employee');
     setPhone('');
+    setPassword('');
+    setShowPassword(false);
     setDesignation('');
     setCustomDailyRate('');
     setFormError(null);
@@ -53,6 +75,17 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (!password.trim()) {
+      setFormError('Please enter a login password for the employee.');
+      return;
+    }
+
+    if (password.trim().length < 4) {
+      setFormError('Password must be at least 4 characters long.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -60,6 +93,7 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
         createEmployee({
           name: name.trim(),
           phone: phone.trim(),
+          password: password.trim(),
           email: email.trim() ? email.trim().toLowerCase() : undefined,
           role,
           designation: designation.trim() || undefined,
@@ -76,6 +110,50 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleOpenPasswordModal = (emp: { _id: string; name: string; phone: string }) => {
+    setPasswordModalEmp({ id: emp._id, name: emp.name, phone: emp.phone });
+    setNewPassword('');
+    setShowNewPassword(false);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordModalEmp) return;
+    if (!newPassword.trim()) {
+      setPasswordError('Please enter a new password');
+      return;
+    }
+    if (newPassword.trim().length < 4) {
+      setPasswordError('Password must be at least 4 characters long');
+      return;
+    }
+
+    setPasswordError(null);
+    setPasswordSubmitting(true);
+    try {
+      await dispatch(
+        updateEmployee({
+          id: passwordModalEmp.id,
+          data: { password: newPassword.trim() },
+        }),
+      ).unwrap();
+      setPasswordSuccess('Password updated successfully!');
+      setTimeout(() => {
+        setPasswordModalEmp(null);
+      }, 1000);
+    } catch (err: unknown) {
+      setPasswordError(
+        typeof err === 'string'
+          ? err
+          : (err as Error)?.message || 'Failed to update password',
+      );
+    } finally {
+      setPasswordSubmitting(false);
     }
   };
 
@@ -236,9 +314,17 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                         )}
                         <button
                           type="button"
+                          onClick={() => handleOpenPasswordModal(emp)}
+                          title="Change / Reset Password"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDelete(emp._id, emp.name)}
                           title="Delete Employee"
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -326,6 +412,61 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                 </div>
               </div>
 
+              {/* Login Password */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Login Password *
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setPassword('test123')}
+                      className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer"
+                    >
+                      Use "test123"
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomNum = Math.floor(1000 + Math.random() * 9000);
+                        setPassword(`emp${randomNum}`);
+                      }}
+                      className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer"
+                    >
+                      Auto-generate
+                    </button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Enter password for employee login"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-9 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Employee will sign in using their phone number and this password.
+                </p>
+              </div>
+
               {/* Role & Designation */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -397,6 +538,112 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                 >
                   <Check className="w-4 h-4" />
                   <span>{submitting ? 'Saving...' : 'Add Employee'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {passwordModalEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Change Password</h3>
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    {passwordModalEmp.name} • {passwordModalEmp.phone}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPasswordModalEmp(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {passwordError && (
+              <div className="mx-6 mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center space-x-2 text-rose-700 text-xs font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            {passwordSuccess && (
+              <div className="mx-6 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center space-x-2 text-emerald-700 text-xs font-medium">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{passwordSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePassword} className="p-6 space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    New Password *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const randomNum = Math.floor(1000 + Math.random() * 9000);
+                      setNewPassword(`emp${randomNum}`);
+                    }}
+                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer"
+                  >
+                    Auto-generate
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Enter new password (min 4 chars)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-9 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  The employee will immediately use this new password to sign into their portal.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setPasswordModalEmp(null)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordSubmitting}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{passwordSubmitting ? 'Updating...' : 'Save Password'}</span>
                 </button>
               </div>
             </form>

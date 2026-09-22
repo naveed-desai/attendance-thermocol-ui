@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/index.ts';
 import { fetchEmployees } from '../../store/slices/employeesSlice.ts';
 import { setActiveEmployeeId, setRole } from '../../store/slices/authSlice.ts';
 import { EmployeeOverview } from './EmployeeOverview.tsx';
 import { LogTimesheetForm } from './LogTimesheetForm.tsx';
 import { TimesheetHistoryTable } from './TimesheetHistoryTable.tsx';
-import { UserCheck, Users, ShieldAlert } from 'lucide-react';
+import { UserCheck, Users, ShieldAlert, Shield } from 'lucide-react';
+import { CustomSelect } from '../common/CustomSelect.tsx';
 
 export const EmployeePortal: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -32,6 +33,14 @@ export const EmployeePortal: React.FC = () => {
   const activeEmployee = isEmployee
     ? currentUser
     : employees.find((e) => e._id === activeEmployeeId);
+
+  const employeeOptions = useMemo(() => {
+    return employees.map((emp) => ({
+      value: emp._id,
+      label: emp.name,
+      badge: emp.phone,
+    }));
+  }, [employees]);
 
   // If admin and no employees exist in DB
   if (!isEmployee && !loading && employees.length === 0) {
@@ -93,6 +102,48 @@ export const EmployeePortal: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Admin Preview Mode Banner */}
+      {!isEmployee && (
+        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200/80 rounded-2xl p-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200/60">
+                    Admin Preview
+                  </span>
+                  <span className="text-xs text-amber-800/80 font-medium">
+                    Viewing as Employee
+                  </span>
+                </div>
+                <div className="font-semibold text-slate-900 text-sm mt-0.5">
+                  {activeEmployee.name} <span className="text-xs font-normal text-slate-500">({activeEmployee.phone})</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-200/60">
+              <span className="text-xs font-semibold text-amber-950 shrink-0">
+                Select Employee:
+              </span>
+              <div className="w-full sm:w-64">
+                <CustomSelect
+                  value={activeEmployeeId || ''}
+                  onChange={(val) => dispatch(setActiveEmployeeId(val || null))}
+                  options={employeeOptions}
+                  placeholder="Select Employee..."
+                  fullWidth={true}
+                  className="w-full bg-white text-xs py-2 px-3 border-amber-200 shadow-2xs hover:border-amber-300"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Financial Overview Metrics */}
       <EmployeeOverview employeeId={activeEmployee._id} />
 

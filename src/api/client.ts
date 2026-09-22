@@ -78,6 +78,7 @@ export const api = {
     create: async (data: {
       name: string;
       phone: string;
+      password?: string;
       email?: string;
       role?: string;
       customDailyRate?: number;
@@ -92,7 +93,7 @@ export const api = {
     },
     update: async (
       id: string,
-      data: Partial<Employee>,
+      data: Partial<Employee> & { password?: string },
     ): Promise<Employee> => {
       const res = await fetch(`${BASE_URL}/employees/${id}`, {
         method: 'PATCH',

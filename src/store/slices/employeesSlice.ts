@@ -33,6 +33,7 @@ export const createEmployee = createAsyncThunk(
     data: {
       name: string;
       phone: string;
+      password?: string;
       email?: string;
       role?: string;
       customDailyRate?: number;
@@ -46,6 +47,22 @@ export const createEmployee = createAsyncThunk(
       return created;
     } catch (err: unknown) {
       return rejectWithValue((err as Error).message || 'Failed to create employee');
+    }
+  },
+);
+
+export const updateEmployee = createAsyncThunk(
+  'employees/updateEmployee',
+  async (
+    { id, data }: { id: string; data: Partial<Employee> & { password?: string } },
+    { rejectWithValue, dispatch },
+  ) => {
+    try {
+      const updated = await api.employees.update(id, data);
+      dispatch(fetchEmployees(false));
+      return updated;
+    } catch (err: unknown) {
+      return rejectWithValue((err as Error).message || 'Failed to update employee');
     }
   },
 );
