@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from './store/index.ts';
 import { fetchEmployees } from './store/slices/employeesSlice.ts';
 import { LoginPage } from './components/auth/LoginPage.tsx';
 import { Navbar } from './components/Navbar.tsx';
+import { Footer } from './components/Footer.tsx';
 import { EmployeePortal } from './components/employee/EmployeePortal.tsx';
 import { AdminPortal } from './components/admin/AdminPortal.tsx';
 
@@ -37,9 +38,7 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
-        Attendance Management & Salary Calculation System • NestJS & React Redux
-      </footer>
+      <Footer />
     </div>
   );
 };

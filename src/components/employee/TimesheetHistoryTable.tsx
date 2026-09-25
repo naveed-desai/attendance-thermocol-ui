@@ -14,7 +14,8 @@ import {
   Calendar,
   LogOut,
 } from 'lucide-react';
-import { formatTo12Hour, getCurrentTime12Hour } from '../../utils/time.ts';
+import { formatTo12Hour, getCurrentTime12Hour, roundTimeTo5Min } from '../../utils/time.ts';
+import { Pagination } from '../common/Pagination.tsx';
 
 interface TimesheetHistoryTableProps {
   employeeId: string;
@@ -26,6 +27,8 @@ export const TimesheetHistoryTable: React.FC<TimesheetHistoryTableProps> = ({
   const dispatch = useAppDispatch();
   const { records, loading } = useAppSelector((state) => state.attendance);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     if (employeeId) {
@@ -33,10 +36,19 @@ export const TimesheetHistoryTable: React.FC<TimesheetHistoryTableProps> = ({
     }
   }, [dispatch, employeeId]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, employeeId]);
+
   const filteredRecords = records.filter((rec) => {
     if (filterStatus === 'all') return true;
     return rec.status === filterStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedRecords = filteredRecords.slice(startIndex, startIndex + pageSize);
 
   const handleDelete = async (id: string, date: string) => {
     if (window.confirm(`Are you sure you want to delete the pending timesheet for ${date}?`)) {
@@ -45,7 +57,7 @@ export const TimesheetHistoryTable: React.FC<TimesheetHistoryTableProps> = ({
   };
 
   const handleQuickCheckout = async (id: string, date: string, startTime: string) => {
-    const defaultTime = getCurrentTime12Hour();
+    const defaultTime = getCurrentTime12Hour('floor');
     const formattedStart = formatTo12Hour(startTime);
     const checkoutTime = window.prompt(
       `Enter Check-Out time for ${date} (Checked in at ${formattedStart}):\nFormat e.g. 05:30 PM:`,
@@ -61,7 +73,7 @@ export const TimesheetHistoryTable: React.FC<TimesheetHistoryTableProps> = ({
       alert('Invalid time format. Please use 12-hour format (e.g. 05:30 PM or 06:00 PM)');
       return;
     }
-    const finalFormatted = formatTo12Hour(cleaned);
+    const finalFormatted = roundTimeTo5Min(formatTo12Hour(cleaned), 'floor');
     await dispatch(checkoutAttendance({ id, endTime: finalFormatted, employeeId }));
   };
 
@@ -133,7 +145,7 @@ export const TimesheetHistoryTable: React.FC<TimesheetHistoryTableProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredRecords.map((item) => (
+              paginatedRecords.map((item) => (
                 <tr key={item._id} className="hover:bg-slate-50/70 transition-colors">
                   {/* Date & Day */}
                   <td className="py-3.5 px-4">
@@ -276,6 +288,20 @@ export const TimesheetHistoryTable: React.FC<TimesheetHistoryTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {filteredRecords.length > 0 && (
+        <Pagination
+          currentPage={safeCurrentPage}
+          totalItems={filteredRecords.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+        />
+      )}
     </div>
   );
 };

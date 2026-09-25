@@ -100,16 +100,98 @@ export function parseTimeTo12Hour(
 }
 
 /**
- * Gets current time formatted as 12-hour string (rounded to nearest 5 minutes)
+ * Rounds a 12-hour or 24-hour time string to 5-minute intervals.
+ * - 'ceil': rounds up to the next 5-minute interval (for check-in)
+ * - 'floor': rounds down to the previous 5-minute interval (for check-out)
  */
-export function getCurrentTime12Hour(): string {
+export function roundTimeTo5Min(
+  timeStr?: string | null,
+  mode: 'ceil' | 'floor' = 'floor',
+): string {
+  if (!timeStr) return '';
+  const cleaned = timeStr.trim();
+  const match12 = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = parseInt(match12[2], 10);
+    const period = match12[3].toUpperCase();
+    let hours24 = hours;
+    if (period === 'PM' && hours24 < 12) hours24 += 12;
+    if (period === 'AM' && hours24 === 12) hours24 = 0;
+    let totalMinutes = hours24 * 60 + minutes;
+
+    const rem = totalMinutes % 5;
+    if (rem !== 0) {
+      if (mode === 'ceil') {
+        totalMinutes += 5 - rem;
+      } else {
+        totalMinutes -= rem;
+      }
+    }
+
+    totalMinutes = totalMinutes % (24 * 60);
+    const h24 = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const p = h24 >= 12 ? 'PM' : 'AM';
+    const h12 = h24 % 12 || 12;
+    return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${p}`;
+  }
+
+  const match24 = cleaned.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    const hours = parseInt(match24[1], 10);
+    const minutes = parseInt(match24[2], 10);
+    let totalMinutes = hours * 60 + minutes;
+
+    const rem = totalMinutes % 5;
+    if (rem !== 0) {
+      if (mode === 'ceil') {
+        totalMinutes += 5 - rem;
+      } else {
+        totalMinutes -= rem;
+      }
+    }
+
+    totalMinutes = totalMinutes % (24 * 60);
+    const h24 = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  return timeStr;
+}
+
+/**
+ * Gets current time formatted as 12-hour string (with support for ceil/floor/nearest rounding to 5 minutes)
+ * - 'ceil': rounds up to next 5 minutes (always ceil for checkin)
+ * - 'floor': rounds down to previous 5 minutes (always floor for checkout)
+ * - 'nearest': rounds to nearest 5 minutes
+ */
+export function getCurrentTime12Hour(
+  mode: 'ceil' | 'floor' | 'nearest' = 'nearest',
+): string {
   const now = new Date();
-  let h = now.getHours();
-  const period = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  const roundedM = Math.round(now.getMinutes() / 5) * 5;
-  const actualM = roundedM >= 60 ? 55 : roundedM;
-  return `${String(h).padStart(2, '0')}:${String(actualM).padStart(2, '0')} ${period}`;
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  let totalMinutes = hours * 60 + minutes;
+
+  const rem = totalMinutes % 5;
+  if (rem !== 0) {
+    if (mode === 'ceil') {
+      totalMinutes += 5 - rem;
+    } else if (mode === 'floor') {
+      totalMinutes -= rem;
+    } else {
+      totalMinutes = Math.round(totalMinutes / 5) * 5;
+    }
+  }
+
+  totalMinutes = totalMinutes % (24 * 60);
+  const h24 = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 || 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 /**

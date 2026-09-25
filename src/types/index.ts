@@ -35,7 +35,8 @@ export interface AuthUser {
 export interface DailyRateOverride {
   _id?: string;
   date: string;
-  rate8h: number;
+  bonus8h?: number;
+  rate8h?: number;
   reason?: string;
   setBy?: string;
   createdAt?: string;
@@ -45,9 +46,11 @@ export interface ResolvedRate {
   date: string;
   dayOfWeek: string;
   isSunday: boolean;
+  baseRate8h: number;
+  bonus8h: number;
   rate8h: number;
   hourlyRate: number;
-  source: 'override' | 'employee_custom' | 'sunday_default' | 'standard_default';
+  source: 'override' | 'employee_custom' | 'standard_default';
   reason?: string;
 }
 

@@ -8,7 +8,12 @@ import { api } from '../../api/client.ts';
 import type { ResolvedRate } from '../../types/index.ts';
 import { DatePickerInput } from '../common/DatePickerInput.tsx';
 import { TimePickerInput } from '../common/TimePickerInput.tsx';
-import { formatTo12Hour, timeStringToMinutes, getLocalDateString } from '../../utils/time.ts';
+import {
+  formatTo12Hour,
+  timeStringToMinutes,
+  getLocalDateString,
+  roundTimeTo5Min,
+} from '../../utils/time.ts';
 import {
   Clock,
   IndianRupee,
@@ -105,8 +110,10 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
   // Live calculation of duration and salary when both times are available
   const metrics = useMemo(() => {
     if (!effectiveStartTime || !endTime) return null;
-    const startTotal = timeStringToMinutes(effectiveStartTime);
-    const endTotal = timeStringToMinutes(endTime);
+    const roundedStart = roundTimeTo5Min(effectiveStartTime, 'ceil');
+    const roundedEnd = roundTimeTo5Min(endTime, 'floor');
+    const startTotal = timeStringToMinutes(roundedStart);
+    const endTotal = timeStringToMinutes(roundedEnd);
 
     let durationMinutes = endTotal - startTotal;
     if (durationMinutes < 0) {
@@ -117,8 +124,9 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
     const mins = durationMinutes % 60;
     const hoursWorkedDecimal = Math.round((durationMinutes / 60) * 100) / 100;
     const hourlyRate = rate8h / 8;
+    // Daily salary floored to integer (no .50 or decimals)
     const calculatedSalary =
-      Math.round(((durationMinutes / 480) * rate8h) * 100) / 100;
+      Math.floor((durationMinutes / 480) * rate8h);
 
     let shiftType: 'standard' | 'overtime' | 'undertime' = 'standard';
     if (durationMinutes > 480) shiftType = 'overtime';
@@ -132,6 +140,8 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
       hourlyRate,
       calculatedSalary,
       shiftType,
+      roundedStart,
+      roundedEnd,
     };
   }, [effectiveStartTime, endTime, rate8h]);
 
@@ -157,17 +167,19 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
         return;
       }
 
+      const finalEndTime = roundTimeTo5Min(endTime, 'floor');
+
       try {
         await dispatch(
           checkoutAttendance({
             id: existingShift._id,
-            endTime,
+            endTime: finalEndTime,
             employeeId,
           }),
         ).unwrap();
 
         setSuccessMessage(
-          `Check-out recorded at ${formatTo12Hour(endTime)} for ${date}! Total: ${metrics.hours}h ${metrics.mins}m (₹${metrics.calculatedSalary.toFixed(2)}).`,
+          `Check-out recorded at ${formatTo12Hour(finalEndTime)} for ${date}! Total: ${metrics.hours}h ${metrics.mins}m (₹${metrics.calculatedSalary.toFixed(2)}).`,
         );
         setEndTime('');
         setTimeout(() => setSuccessMessage(null), 5000);
@@ -183,18 +195,19 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
 
     // Case 2: Logging check-in only (no checkout provided yet)
     if (!endTime) {
+      const finalStartTime = roundTimeTo5Min(startTime, 'ceil');
       try {
         await dispatch(
           createAttendance({
             employeeId,
             date,
-            startTime,
+            startTime: finalStartTime,
             dailyRate8h: Number(rate8h),
           }),
         ).unwrap();
 
         setSuccessMessage(
-          `Check-in recorded at ${formatTo12Hour(startTime)} on ${date}! You can log check-out when your shift finishes.`,
+          `Check-in recorded at ${formatTo12Hour(finalStartTime)} on ${date}! You can log check-out when your shift finishes.`,
         );
         setTimeout(() => setSuccessMessage(null), 5000);
       } catch (err: unknown) {
@@ -213,19 +226,22 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
       return;
     }
 
+    const finalStartTime = roundTimeTo5Min(startTime, 'ceil');
+    const finalEndTime = roundTimeTo5Min(endTime, 'floor');
+
     try {
       await dispatch(
         createAttendance({
           employeeId,
           date,
-          startTime,
-          endTime,
+          startTime: finalStartTime,
+          endTime: finalEndTime,
           dailyRate8h: Number(rate8h),
         }),
       ).unwrap();
 
       setSuccessMessage(
-        `Timesheet for ${date} (${formatTo12Hour(startTime)} – ${formatTo12Hour(endTime)}) logged successfully! Awaiting admin approval.`,
+        `Timesheet for ${date} (${formatTo12Hour(finalStartTime)} – ${formatTo12Hour(finalEndTime)}) logged successfully! Awaiting admin approval.`,
       );
       setEndTime('');
       setTimeout(() => setSuccessMessage(null), 5000);
@@ -251,20 +267,16 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
         {resolvedRateInfo && (
           <div
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 ${
-              resolvedRateInfo.isSunday
-                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                : resolvedRateInfo.source === 'override'
+              resolvedRateInfo.bonus8h > 0
                 ? 'bg-purple-100 text-purple-800 border border-purple-200'
                 : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>
-              {resolvedRateInfo.isSunday
-                ? 'Sunday Special: ₹250/8h'
-                : resolvedRateInfo.source === 'override'
-                ? `Admin Override: ₹${resolvedRateInfo.rate8h}/8h`
-                : 'Standard Day: ₹240/8h'}
+              {resolvedRateInfo.bonus8h > 0
+                ? `Special Date Bonus (+₹${resolvedRateInfo.bonus8h}): ₹${resolvedRateInfo.rate8h}/8h`
+                : `Daily Rate: ₹${resolvedRateInfo.rate8h}/8h`}
             </span>
           </div>
         )}
@@ -332,7 +344,9 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
               label="Work Date"
               helperText={
                 resolvedRateInfo
-                  ? `${resolvedRateInfo.dayOfWeek} ${resolvedRateInfo.isSunday ? '(Sunday Rate Applies)' : ''}`
+                  ? resolvedRateInfo.bonus8h > 0
+                    ? `${resolvedRateInfo.dayOfWeek} (Special Date Bonus: +₹${resolvedRateInfo.bonus8h})`
+                    : resolvedRateInfo.dayOfWeek
                   : undefined
               }
             />
@@ -350,6 +364,7 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
                   </span>
                 ) : undefined
               }
+              roundMode="ceil"
               presets={['08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', '10:00 AM']}
             />
 
@@ -362,6 +377,7 @@ export const LogTimesheetForm: React.FC<LogTimesheetFormProps> = ({ employeeId }
               allowClear={true}
               defaultPeriod="PM"
               defaultTimeOnOpen={defaultEveningCheckout}
+              roundMode="floor"
               helperText="Automatically set to evening when opened"
               presets={['05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM', '08:00 PM']}
             />

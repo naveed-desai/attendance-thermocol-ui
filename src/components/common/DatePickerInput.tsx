@@ -292,7 +292,6 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
                       ? 'text-amber-700 bg-amber-50/50 hover:bg-amber-100 font-bold'
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
-                  title={item.isSunday ? 'Sunday Special Rate' : undefined}
                 >
                   {item.day}
                 </button>
@@ -303,8 +302,8 @@ export const DatePickerInput: React.FC<DatePickerInputProps> = ({
           {/* Legend / Status */}
           <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
             <span className="flex items-center space-x-1">
-              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-              <span>Sundays (₹250 rate)</span>
+              <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
+              <span>Today / Selected</span>
             </span>
             <button
               type="button"

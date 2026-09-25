@@ -23,6 +23,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { CustomSelect } from '../common/CustomSelect.tsx';
+import { Pagination } from '../common/Pagination.tsx';
 
 interface AdminEmployeesProps {
   onSelectForPayroll?: (employeeId: string) => void;
@@ -34,6 +35,9 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
   const dispatch = useAppDispatch();
   const { list: employees, loading } = useAppSelector((state) => state.employees);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,7 +46,12 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [designation, setDesignation] = useState('');
-  const [customDailyRate, setCustomDailyRate] = useState<string>('');
+  const [customDailyRate, setCustomDailyRate] = useState<string>('240');
+
+  const totalPages = Math.max(1, Math.ceil(employees.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedEmployees = employees.slice(startIndex, startIndex + pageSize);
 
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -67,14 +76,32 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
     setPassword('');
     setShowPassword(false);
     setDesignation('');
-    setCustomDailyRate('');
+    setCustomDailyRate('240');
     setFormError(null);
     setShowModal(true);
+  };
+
+  const handlePhoneChange = (val: string) => {
+    // Only allow numeric digits and limit to 10 digits
+    const digitsOnly = val.replace(/\D/g, '').slice(0, 10);
+    setPhone(digitsOnly);
+    if (formError) setFormError(null);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    const cleanPhone = phone.trim();
+    if (!cleanPhone) {
+      setFormError('Please enter a phone number for the employee.');
+      return;
+    }
+
+    if (cleanPhone.length !== 10 || !/^[0-9]{10}$/.test(cleanPhone)) {
+      setFormError('Phone number must be exactly 10 digits (e.g. 9876543210).');
+      return;
+    }
 
     if (!password.trim()) {
       setFormError('Please enter a login password for the employee.');
@@ -83,6 +110,11 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
 
     if (password.trim().length < 4) {
       setFormError('Password must be at least 4 characters long.');
+      return;
+    }
+
+    if (!customDailyRate.trim() || Number(customDailyRate) <= 0) {
+      setFormError('Please enter a valid daily rate for the employee (greater than 0).');
       return;
     }
 
@@ -97,7 +129,7 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
           email: email.trim() ? email.trim().toLowerCase() : undefined,
           role,
           designation: designation.trim() || undefined,
-          customDailyRate: customDailyRate ? Number(customDailyRate) : undefined,
+          customDailyRate: Number(customDailyRate),
         }),
       ).unwrap();
 
@@ -221,7 +253,7 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
+                paginatedEmployees.map((emp) => (
                   <tr key={emp._id} className="hover:bg-slate-50/70 transition-colors">
                     {/* Employee Profile */}
                     <td className="py-3.5 px-4">
@@ -247,22 +279,11 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                     </td>
 
                     {/* Base 8h Rate */}
-                    <td className="py-3.5 px-4 font-medium text-slate-900">
-                      {emp.customDailyRate ? (
-                        <span className="text-purple-700">
-                          ₹{emp.customDailyRate}{' '}
-                          <span className="text-[10px] text-slate-400 font-normal">
-                            (custom)
-                          </span>
-                        </span>
-                      ) : (
-                        <span>
-                          ₹240{' '}
-                          <span className="text-[10px] text-slate-400 font-normal">
-                            (default)
-                          </span>
-                        </span>
-                      )}
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                      ₹{emp.customDailyRate ?? 240}
+                      <span className="text-[10px] text-slate-400 font-normal ml-1">
+                        / 8h
+                      </span>
                     </td>
 
                     {/* Total Approved */}
@@ -336,6 +357,20 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
             </tbody>
           </table>
         </div>
+
+        {employees.length > 0 && (
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalItems={employees.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+          />
+        )}
       </div>
 
       {/* Add Employee Modal */}
@@ -379,17 +414,29 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
               {/* Phone & Email Address */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Phone Number *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Phone Number *
+                    </label>
+                    <span
+                      className={`text-[10px] font-bold ${
+                        phone.length === 10 ? 'text-emerald-600' : 'text-slate-400'
+                      }`}
+                    >
+                      {phone.length}/10 digits
+                    </span>
+                  </div>
                   <div className="relative">
                     <input
                       type="tel"
+                      inputMode="numeric"
                       required
+                      maxLength={10}
+                      pattern="[0-9]{10}"
                       placeholder="e.g. 9876543210"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-medium"
                     />
                     <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   </div>
@@ -501,15 +548,16 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                 </div>
               </div>
 
-              {/* Custom Daily Rate */}
+              {/* Daily Rate / 8h Wage */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Custom 8h Rate (₹)
+                  Daily Rate / 8h Wage (₹) *
                 </label>
                 <div className="relative">
                   <input
                     type="number"
-                    placeholder="Default: ₹240 (Sundays ₹250)"
+                    required
+                    placeholder="e.g. 240, 250, 300"
                     min="1"
                     value={customDailyRate}
                     onChange={(e) => setCustomDailyRate(e.target.value)}
@@ -518,7 +566,7 @@ export const AdminEmployees: React.FC<AdminEmployeesProps> = ({
                   <IndianRupee className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 </div>
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  Leave blank for standard default rates (₹240 for Mon–Sat, ₹250 for Sundays)
+                  Baseline 8-hour wage for all weekdays and weekends (Monday through Sunday).
                 </span>
               </div>
 

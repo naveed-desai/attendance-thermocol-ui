@@ -46,7 +46,8 @@ export const api = {
     },
     setOverride: async (data: {
       date: string;
-      rate8h: number;
+      bonus8h?: number;
+      rate8h?: number;
       reason?: string;
     }): Promise<DailyRateOverride> => {
       const res = await fetch(`${BASE_URL}/rates/overrides`, {

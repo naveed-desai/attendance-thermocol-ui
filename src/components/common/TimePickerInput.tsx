@@ -18,6 +18,7 @@ interface TimePickerInputProps {
   allowClear?: boolean;
   defaultPeriod?: 'AM' | 'PM';
   defaultTimeOnOpen?: string;
+  roundMode?: 'ceil' | 'floor' | 'nearest';
 }
 
 export const TimePickerInput: React.FC<TimePickerInputProps> = ({
@@ -32,6 +33,7 @@ export const TimePickerInput: React.FC<TimePickerInputProps> = ({
   allowClear = false,
   defaultPeriod = 'AM',
   defaultTimeOnOpen,
+  roundMode,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [popoverAlign, setPopoverAlign] = useState<'left' | 'right'>('left');
@@ -121,7 +123,7 @@ export const TimePickerInput: React.FC<TimePickerInputProps> = ({
   };
 
   const handleSetCurrentTime = () => {
-    const current = getCurrentTime12Hour();
+    const current = getCurrentTime12Hour(roundMode || 'nearest');
     onChange(current);
     setIsOpen(false);
   };

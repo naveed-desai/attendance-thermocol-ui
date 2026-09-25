@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatTo12Hour } from '../../utils/time.ts';
 import { CustomSelect } from '../common/CustomSelect.tsx';
+import { Pagination } from '../common/Pagination.tsx';
 
 export const AdminApprovals: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -25,6 +26,8 @@ export const AdminApprovals: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
 
@@ -47,6 +50,15 @@ export const AdminApprovals: React.FC = () => {
       }),
     );
   }, [dispatch, statusFilter, selectedEmployeeId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, selectedEmployeeId]);
+
+  const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedRecords = records.slice(startIndex, startIndex + pageSize);
 
   const handleApprove = async (id: string) => {
     await dispatch(
@@ -88,24 +100,28 @@ export const AdminApprovals: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
           {/* Employee Filter */}
-          <CustomSelect
-            value={selectedEmployeeId}
-            onChange={(val) => setSelectedEmployeeId(val)}
-            options={employeeOptions}
-            placeholder="All Employees"
-            icon={<Filter className="w-3.5 h-3.5" />}
-          />
+          <div className="w-full sm:w-auto">
+            <CustomSelect
+              value={selectedEmployeeId}
+              onChange={(val) => setSelectedEmployeeId(val)}
+              options={employeeOptions}
+              placeholder="All Employees"
+              icon={<Filter className="w-3.5 h-3.5" />}
+              fullWidth={true}
+              className="w-full sm:min-w-[180px]"
+            />
+          </div>
 
           {/* Status Tabs */}
-          <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+          <div className="grid grid-cols-4 sm:flex items-center gap-1 sm:space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold w-full sm:w-auto">
             {['pending', 'approved', 'rejected', 'all'].map((status) => (
               <button
                 key={status}
                 type="button"
                 onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1.5 rounded-lg capitalize transition-colors ${
+                className={`py-1.5 px-1 sm:px-3 text-center rounded-lg capitalize transition-colors text-[11px] sm:text-xs truncate cursor-pointer ${
                   statusFilter === status
                     ? 'bg-white text-indigo-600 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -157,7 +173,7 @@ export const AdminApprovals: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                records.map((item) => {
+                paginatedRecords.map((item) => {
                   const empName =
                     typeof item.employeeId === 'object' && item.employeeId !== null
                       ? item.employeeId.name
@@ -339,6 +355,20 @@ export const AdminApprovals: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {records.length > 0 && (
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalItems={records.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+          />
+        )}
       </div>
     </div>
   );

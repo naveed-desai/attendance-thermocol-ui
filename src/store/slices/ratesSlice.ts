@@ -44,7 +44,7 @@ export const fetchOverrides = createAsyncThunk(
 export const setOverride = createAsyncThunk(
   'rates/setOverride',
   async (
-    data: { date: string; rate8h: number; reason?: string },
+    data: { date: string; bonus8h?: number; rate8h?: number; reason?: string },
     { rejectWithValue, dispatch },
   ) => {
     try {
