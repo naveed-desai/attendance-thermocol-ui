@@ -36,6 +36,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   fullWidth = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const [menuAlign, setMenuAlign] = useState<'left' | 'right'>(align);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -49,10 +50,20 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       } else if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+
         if (rect.left + 240 > screenWidth) {
           setMenuAlign('right');
         } else {
           setMenuAlign('left');
+        }
+
+        const spaceBelow = screenHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        if (spaceBelow < 240 && spaceAbove > spaceBelow) {
+          setOpenUpwards(true);
+        } else {
+          setOpenUpwards(false);
         }
       }
       setIsOpen(true);
@@ -126,10 +137,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         />
       </button>
 
-      {/* Dropdown Menu (Directly aligned below the trigger) */}
+      {/* Dropdown Menu (Directly aligned above or below the trigger) */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1.5 z-50 min-w-full w-max max-w-[calc(100vw-2rem)] max-h-64 overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 animate-in fade-in zoom-in-95 duration-100 scrollbar-thin ${
+          className={`absolute ${
+            openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          } z-50 min-w-full w-max max-w-[calc(100vw-2rem)] max-h-64 overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 animate-in fade-in zoom-in-95 duration-100 scrollbar-thin ${
             menuAlign === 'right' ? 'right-0' : 'left-0'
           } ${menuClassName}`}
         >
